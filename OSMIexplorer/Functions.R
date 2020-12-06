@@ -11,6 +11,7 @@ library(readr)
 library(FactoMineR)
 library(missMDA)
 library(rstanarm)
+library(maps)
 
 #read in data and make column names one word
 df2019 <- read_csv("data/OSMI Mental Health in Tech Survey 2019.csv")
@@ -68,7 +69,7 @@ for (i in 1:nrow(column_info)) {
   replaced_condition <- rep(F,nrow(quantitative[,colname]))
 
   for (j in 6:ncol(column_info)-1) {
-    find <- 
+    find <-column_info[[i,j]]
     if (is.na(find)==F) {
       replace <-as.integer(valuesubs[j-4])
       if (colname %in% names(values_in_use)) {
@@ -90,9 +91,17 @@ for (i in 1:nrow(column_info)) {
   quantitative[!replaced_condition,colname] <- as.character(replace)
 }
 
-#remove NAs
-test %>% na_rem
+quantitative <- quantitative %>% 
+  select(-all_of(non_quant_vars)) %>% 
+  mutate_all(type.convert)
 
+#charging logic
+charting_options <- c("scatterplot", "boxplot", "violin", "heatmap", "bar", "us_map", "global_map")
+charting_functions <- list()
+#charting_functions[["scatterplot"]] <- function(df,x,y,) geom_point()
+#charting_functions[["US map"]] <- function(df.x,y) {
+  
+#}
 
 
 
