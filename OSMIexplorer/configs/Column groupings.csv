@@ -8,7 +8,7 @@ Do you know the options for mental health care available under your employer-pro
 "Has your employer ever formally discussed mental health (for example, as part of a wellness campaign or other official communication)?",Mental_health_communication,Current employer communication,Binary+,No,,Yes,,,,,,,,,
 Does your employer offer resources to learn more about mental health disorders and options for seeking help?,Mental_health_resources,Benefits & support,Binary+,No,,Yes,,,,,,,,,
 Is your anonymity protected if you choose to take advantage of mental health or substance abuse treatment resources provided by your employer?,Treatment_anonymity,Benefits & support,Binary+,No,,Yes,,,,,,,,,
-"If a mental health issue prompted you to request a medical leave from work, how easy or difficult would it be to ask for that leave?",Leave_openness,Benefits & support,Ordinal,,,Difficult,Somewhat difficult,I don’t know,Neither easy nor difficult,Somewhat easy,Very easy,,,,
+"If a mental health issue prompted you to request a medical leave from work, how easy or difficult would it be to ask for that leave?",Leave_openness,Benefits & support,Ordinal,,,Difficult,Somewhat difficult,I donï¿½t know,Neither easy nor difficult,Somewhat easy,Very easy,,,,
 Would you feel more comfortable talking to your coworkers about your physical health or your mental health?,Communication_mental_vs_physical,Current employer communication,Binary+,Physical health,,Mental health,,,,,,,,,
 Would you feel comfortable discussing a mental health issue with your direct supervisor(s)?,Communication_supervisor,Current employer communication,Binary+,No,,Yes,,,,,,,,,
 Have you ever discussed your mental health with your employer?,Communication_status_employer,Current employer communication,Binary,,,,,,,,,,,,

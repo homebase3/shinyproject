@@ -1,0 +1,8 @@
+chart_type,allow_grouping
+scatterplot,Y
+boxplot,Y
+violin,Y
+heatmap,N
+bar,Y
+us_map,N
+global_map,N
