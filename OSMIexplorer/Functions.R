@@ -12,10 +12,13 @@ library(FactoMineR)
 library(missMDA)
 library(rstanarm)
 library(maps)
+library(treemap)
+library(d3treeR)
+library(htmlwidgets)
 
 #read in data and make column names one word
 df2019 <- read_csv("data/OSMI Mental Health in Tech Survey 2019.csv")
-column_info <- read_csv("Column groupings.csv")
+column_info <- read_csv("config/Column groupings.csv")
 column_info <- column_info %>% mutate_all(as.character)
 
 #process columns
@@ -98,16 +101,208 @@ quantitative <- quantitative %>%
 #charging logic
 charting_options <- c("scatterplot", "boxplot", "violin", "heatmap", "bar", "us_map", "global_map")
 charting_functions <- list()
-#charting_functions[["scatterplot"]] <- function(df,x,y,) geom_point()
-#charting_functions[["US map"]] <- function(df.x,y) {
+
+
+charting_functions[["scatterplot"]] <- function(x,y,group=NULL) {
+  #build data frame
+  df<- cbind(quantitative[,x],quantitative[,y])
+  colnames(df) <- c(x,y)
+  if (is.null(group) == F) {
+    df<- cbind(df,qualitative[,group])
+    colnames(df)[3] <- group 
+  }
   
-#}
+  #remove nas
+  df <- df[complete.cases(df),]
+  
+  #build ggplot
+  gg <- ggplot(df)
+  if (is.null(group) == F) {
+    gg <- gg + geom_point(aes(x=!!sym(x), y = !!sym(y), color = !!sym(group)))
+  } else {
+    gg <- gg + geom_point(aes(x=!!sym(x), y = !!sym(y)))
+  }
+  
+  gg <- gg + geom_smooth()
+  
+  # build plotly and return
+  ggplotly(gg) %>% return(.)
+}
 
+charting_functions[["boxplot"]] <- function(x,y,group=NULL) {
+  #build data frame
+  df<- cbind(qualitative[,x],quantitative[,y])
+  colnames(df) <- c(x,y)
+  if (is.null(group) == F) {
+    df<- cbind(df,qualitative[,group])
+    colnames(df)[3] <- group 
+  }
+  
+  #remove nas
+  df <- df[complete.cases(df),]
+  
+  #build ggplot
+  gg <- ggplot(df)
+  if (is.null(group) == F) {
+    gg <- gg + geom_boxplot(aes(x=!!sym(x), y = !!sym(y))) + facet_wrap(vars(!!sym(group)))
+  } else {
+    gg <- gg + geom_boxplot(aes(x=!!sym(x), y = !!sym(y)))
+  }
+  
+  # build plotly and return
+  ggplotly(gg) %>% return(.)
+}
 
+charting_functions[["boxplot"]] <- function(x,y,group=NULL) {
+  #build data frame
+  df<- cbind(qualitative[,x],quantitative[,y])
+  colnames(df) <- c(x,y)
+  if (is.null(group) == F) {
+    df<- cbind(df,qualitative[,group])
+    colnames(df)[3] <- group 
+  }
+  
+  #remove nas
+  df <- df[complete.cases(df),]
+  
+  #build ggplot
+  gg <- ggplot(df)
+  if (is.null(group) == F) {
+    gg <- gg + geom_boxplot(aes(x=!!sym(x), y = !!sym(y), fill = !!sym(x))) + facet_wrap(vars(!!sym(group)))
+  } else {
+    gg <- gg + geom_boxplot(aes(x=!!sym(x), y = !!sym(y)))
+  }
+  
+  # build plotly and return
+  ggplotly(gg) %>%
+    layout(showlegend = FALSE) %>% 
+    return(.)
+}
 
+charting_functions[["violin"]] <- function(x,y,group=NULL) {
+  #build data frame
+  df<- cbind(qualitative[,x],quantitative[,y])
+  colnames(df) <- c(x,y)
+  if (is.null(group) == F) {
+    df<- cbind(df,qualitative[,group])
+    colnames(df)[3] <- group 
+  }
+  
+  #remove nas
+  df <- df[complete.cases(df),]
+  
+  #build ggplot
+  gg <- ggplot(df)
+  if (is.null(group) == F) {
+    gg <- gg + geom_violin(aes(x=!!sym(x), y = !!sym(y), fill = !!sym(x))) + facet_wrap(vars(!!sym(group)))
+  } else {
+    gg <- gg + geom_violin(aes(x=!!sym(x), y = !!sym(y)))
+  }
+  
+  # build plotly and return
+  ggplotly(gg) %>%
+    layout(showlegend = FALSE) %>% 
+    return(.)
+}
 
+charting_functions[["bar"]] <- function(x,y,group=NULL) {
+  #build data frame
+  df<- cbind(qualitative[,x],quantitative[,y])
+  colnames(df) <- c(x,y)
+  if (is.null(group) == F) {
+    df<- cbind(df,qualitative[,group])
+    colnames(df)[3] <- group 
+  }
+  
+  #remove nas
+  df <- df[complete.cases(df),]
+  
+  #build ggplot
+  gg <- ggplot(df)
+  if (is.null(group) == F) {
+    gg <- gg + geom_bar(aes(x=!!sym(x), y = !!sym(y), fill = !!sym(group)))
+  } else {
+    gg <- gg + geom_bar(aes(x=!!sym(x), y = !!sym(y)))
+  }
+  
+  # build plotly and return
+  ggplotly(gg) %>% return(.)
+}
 
-y <- "Are you self-employed"
-x <- "What is your race?"
-t_prior <- student_t(df = 7, location = 0, scale = 2.5)
-x <- stan_glm(`*Areyouselfemployed?*` ~ `Whatisyourrace?` , data = df2019, family = binomial(link = "logit"),prior = t_prior, prior_intercept = t_prior,cores = 2, seed = 12345)
+charting_functions[["treemap"]] <- function(x,y=NULL,group=NULL) {
+  #build data frame
+  df<- cbind(qualitative[,x],quantitative[,y])
+  colnames(df) <- c(x,y)
+  if (is.null(group) == F) {
+    df<- cbind(df,qualitative[,group])
+    colnames(df)[3] <- group 
+  }
+  
+  #remove nasand set count dummy
+  df <- df[complete.cases(df),]
+  df[,"val"] <- 1
+  
+  
+  #build treemap
+  if (is.null(y) == F & is.null(group) == F) {
+    df %>% 
+      group_by(!!sym(x),!!sym(group)) %>% 
+      summarize(mean_res= mean(!!sym(y))) -> summed
+    min <- min(summed$mean_res)
+    max <- max(summed$mean_res)
+    mid <- mean(min,max)
+    
+    d3tree3(
+      treemap(
+        df,
+        index = c(x,group),
+        vSize = "val",
+        vColor = y,
+        type = "value",
+        fun.aggregate = "mean",
+        mapping = c(min, mid,max),
+      ),rootname = x
+    ) 
+  } else if (is.null(y) == F) {
+    df %>% 
+      group_by(!!sym(x)) %>% 
+      summarize(mean_res= mean(!!sym(y))) -> summed
+    min <- min(summed$mean_res)
+    max <- max(summed$mean_res)
+    mid <- mean(min,max)
+    
+    d3tree3(
+      tree <- treemap(
+        df,
+        index = c(x),
+        vSize = "val",
+        vColor = y,
+        type = "value",
+        fun.aggregate = "mean",
+        mapping = c(min, mid,max),
+      ), rootname = x
+    )
+  } else if (is.null(group) == F) {
+    d3tree3(
+      tree <- treemap(
+        df,
+        index = c(x,group),
+        vSize = "val",
+        type = "index"
+      ), rootname = x
+    )
+
+  } else  {
+    d3tree3(
+      tree <- treemap(
+        df,
+        index = c(x),
+        vSize = "val",
+        type = "index"
+      ), rootname = x
+    )
+  }
+  
+  # build interactive treemap and return
+    d3tree2(tree, rootname = "world")
+}
