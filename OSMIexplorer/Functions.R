@@ -15,11 +15,16 @@ library(maps)
 library(treemap)
 library(d3treeR)
 library(htmlwidgets)
+library(leaflet)
+library(rgdal)
 
 #read in data and make column names one word
 df2019 <- read_csv("data/OSMI Mental Health in Tech Survey 2019.csv")
 column_info <- read_csv("config/Column groupings.csv")
 column_info <- column_info %>% mutate_all(as.character)
+states  <- readOGR(dsn = paste0(getwd(),"/data/states.json"))
+world <- readOGR(dsn = paste0(getwd(),"/data/world.json"))
+
 
 #process columns
 full_names <- colnames(df2019)
@@ -102,7 +107,6 @@ quantitative <- quantitative %>%
 charting_options <- c("scatterplot", "boxplot", "violin", "heatmap", "bar", "us_map", "global_map")
 charting_functions <- list()
 
-
 charting_functions[["scatterplot"]] <- function(x,y,group=NULL) {
   #build data frame
   df<- cbind(quantitative[,x],quantitative[,y])
@@ -124,30 +128,6 @@ charting_functions[["scatterplot"]] <- function(x,y,group=NULL) {
   }
   
   gg <- gg + geom_smooth()
-  
-  # build plotly and return
-  ggplotly(gg) %>% return(.)
-}
-
-charting_functions[["boxplot"]] <- function(x,y,group=NULL) {
-  #build data frame
-  df<- cbind(qualitative[,x],quantitative[,y])
-  colnames(df) <- c(x,y)
-  if (is.null(group) == F) {
-    df<- cbind(df,qualitative[,group])
-    colnames(df)[3] <- group 
-  }
-  
-  #remove nas
-  df <- df[complete.cases(df),]
-  
-  #build ggplot
-  gg <- ggplot(df)
-  if (is.null(group) == F) {
-    gg <- gg + geom_boxplot(aes(x=!!sym(x), y = !!sym(y))) + facet_wrap(vars(!!sym(group)))
-  } else {
-    gg <- gg + geom_boxplot(aes(x=!!sym(x), y = !!sym(y)))
-  }
   
   # build plotly and return
   ggplotly(gg) %>% return(.)
@@ -205,7 +185,7 @@ charting_functions[["violin"]] <- function(x,y,group=NULL) {
     return(.)
 }
 
-charting_functions[["bar"]] <- function(x,y,group=NULL) {
+charting_functions[["bar"]] <- function(x,y=NULL,group=NULL) {
   #build data frame
   df<- cbind(qualitative[,x],quantitative[,y])
   colnames(df) <- c(x,y)
@@ -217,12 +197,16 @@ charting_functions[["bar"]] <- function(x,y,group=NULL) {
   #remove nas
   df <- df[complete.cases(df),]
   
+  
   #build ggplot
-  gg <- ggplot(df)
-  if (is.null(group) == F) {
-    gg <- gg + geom_bar(aes(x=!!sym(x), y = !!sym(y), fill = !!sym(group)))
+  if (is.null(group) == F & is.null(y) == F) {
+    gg <- ggplot(df) + geom_bar(aes(x=!!sym(x), y = !!sym(y), fill = !!sym(group))) + coord_flip()
+  } else if (is.null(y) == F) {
+    gg <- ggplot(df) + geom_bar(aes(x=!!sym(x), y = !!sym(y))) + coord_flip()
+  } else if (is.null(group) == F) {
+    gg <- swwww43w
   } else {
-    gg <- gg + geom_bar(aes(x=!!sym(x), y = !!sym(y)))
+    gg <- ggplot(df) + geom_bar(aes(x=!!sym(x))) + coord_flip()
   }
   
   # build plotly and return
@@ -305,4 +289,158 @@ charting_functions[["treemap"]] <- function(x,y=NULL,group=NULL) {
   
   # build interactive treemap and return
     d3tree2(tree, rootname = "world")
+}
+
+charting_functions[["us_map"]] <- function(x,y=NULL) {
+  
+  #build data frame
+  df<- cbind(qualitative[,x])
+  colnames(df) <- x
+  if (is.null(group) == F) {
+    df<- cbind(df,quantitative[,y])
+    colnames(df)[2] <- y
+  }
+  #remove nas
+  df <- df[complete.cases(df),]
+  
+  #build leaflet
+  if (is.null(y) == F) {
+    df %>% 
+      group_by(!!sym(x)) %>% 
+      summarize(mean_y = mean(!!sym(y))) -> summed
+    colnames(summed) <- colnames(df)
+    
+    states_it <- states
+    
+    states_it@data %>% 
+      left_join(summed, by = c("NAME" = x)) -> states_it@data
+    
+    mypalette <- colorNumeric(palette="Purples", domain=states_it@data[[y]], na.color="transparent")
+    
+    mytext <- paste(
+      "Country: ", states_it@data$NAME,"<br/>", 
+      paste0(y,": "), round(states_it@data[[y]],2), "<br/>",
+      sep="") %>%
+      lapply(htmltools::HTML)
+    
+    
+    leaflet(states_it) %>% 
+      addTiles() %>% 
+      setView(lat = 39.8333333, lng = -98.585522,zoom =3) %>% 
+      addPolygons(fillColor = ~mypalette(states_it@data[[y]]), stroke=FALSE,
+                   label = mytext,
+                   labelOptions = labelOptions( 
+                     style = list("font-weight" = "normal", padding = "3px 8px"), 
+                     textsize = "13px", 
+                     direction = "auto")) %>% 
+      addLegend(pal = mypalette, values = states_it@data[[y]],opacity=0.9,position = "bottomleft") %>% 
+      return(.)
+    
+  } else {
+    df %>% 
+      group_by(!!sym(x)) %>% 
+      summarize(count = n()) -> summed
+    
+    states_it <- states
+    
+    states_it@data %>% 
+      left_join(summed, by = c("NAME" = x)) -> states_it@data
+    
+    mypalette <- colorNumeric(palette="Purples", domain=states_it@data$count, na.color="transparent")
+    
+    mytext <- paste(
+      "Country: ", states_it@data$NAME,"<br/>", 
+      "Count: ", states_it@data$count, "<br/>",
+      sep="") %>%
+      lapply(htmltools::HTML)
+    
+    
+    leaflet(states_it) %>% 
+      addTiles() %>% 
+      setView(lat = 39.8333333, lng = -98.585522,zoom =3) %>% 
+      addPolygons(fillColor = ~mypalette(states_it@data$count), stroke=FALSE,
+                  label = mytext,
+                  labelOptions = labelOptions( 
+                    style = list("font-weight" = "normal", padding = "3px 8px"), 
+                    textsize = "13px", 
+                    direction = "auto")) %>% 
+      addLegend(pal = mypalette, values = ~count,opacity=0.9,position = "bottomleft") %>% 
+      return(.)
+  }
+}
+
+charting_functions[["world_map"]] <- function(x,y=NULL) {
+  
+  #build data frame
+  df<- cbind(qualitative[,x])
+  colnames(df) <- x
+  if (is.null(group) == F) {
+    df<- cbind(df,quantitative[,y])
+    colnames(df)[2] <- y
+  }
+  #remove nas
+  df <- df[complete.cases(df),]
+  
+  #build leaflet
+  if (is.null(y) == F) {
+    df %>% 
+      group_by(!!sym(x)) %>% 
+      summarize(mean_y = mean(!!sym(y))) -> summed
+    colnames(summed) <- colnames(df)
+    
+    world_it <- world
+    
+    world_it@data %>% 
+      left_join(summed, by = c("name_sort" = x)) -> world_it@data
+    
+    mypalette <- colorNumeric(palette="Purples", domain=world_it@data[[y]], na.color="transparent")
+    
+    mytext <- paste(
+      "Country: ", world_it@data$name_sort,"<br/>", 
+      paste0(y,": "), round(world_it@data[[y]],2), "<br/>",
+      sep="") %>%
+      lapply(htmltools::HTML)
+    
+    
+    leaflet(world_it) %>% 
+      addTiles() %>% 
+      addPolygons(fillColor = ~mypalette(world_it@data[[y]]), stroke=FALSE,
+                  label = mytext,
+                  labelOptions = labelOptions( 
+                    style = list("font-weight" = "normal", padding = "3px 8px"), 
+                    textsize = "13px", 
+                    direction = "auto")) %>% 
+      addLegend(pal = mypalette, values = world_it@data[[y]],opacity=0.9,position = "bottomleft") %>% 
+      return(.)
+    
+  } else {
+    df %>% 
+      group_by(!!sym(x)) %>% 
+      summarize(count = n()) -> summed
+    
+    world_it <- world
+    
+    world_it@data %>% 
+      left_join(summed, by = c("name_sort" = x)) -> world_it@data
+    
+    mypalette <- colorNumeric(palette="Purples", domain=world_it@data$count, na.color="transparent")
+    
+    mytext <- paste(
+      "Country: ", world_it@data$name_sort,"<br/>", 
+      "Count: ", world_it@data$count, "<br/>",
+      sep="") %>%
+      lapply(htmltools::HTML)
+    
+    
+    leaflet(world_it) %>% 
+      addTiles() %>% 
+      addPolygons(fillColor = ~mypalette(states_it@data$count), stroke=FALSE,
+                  label = mytext,
+                  labelOptions = labelOptions( 
+                    style = list("font-weight" = "normal", padding = "3px 8px"), 
+                    textsize = "13px", 
+                    direction = "auto")) %>% 
+      addLegend(pal = mypalette, values = ~count,opacity=0.9,position = "bottomleft") %>% 
+      return(.)
+  }
 }
