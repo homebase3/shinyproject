@@ -1,47 +1,76 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
 
+# load packages
 library(shiny)
+library(shinyWidgets)
+library(tidyverse)
+
+#source("functions.R")
+
+
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
 
     # Application title
-    titlePanel("Old Faithful Geyser Data"),
+    titlePanel("OSMI data explorer"),
 
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(
-            sliderInput("bins",
-                        "Number of bins:",
-                        min = 1,
-                        max = 50,
-                        value = 30)
+            h4("Step 1: Select variables"),
+            htmlOutput("datapoints"),
+            lapply(names(topics), function(name)
+                   pickerInput(
+                       name,
+                       name,
+                       topics[[name]],
+                       multiple = T,
+                       options = list(`actions-box` = TRUE)
+                   )),
+            h4("Step 2: Update variables"),
+            actionButton("update", "Update variables")
         ),
 
         # Show a plot of the generated distribution
         mainPanel(
-           plotOutput("distPlot")
+            lapply(c("X","Y","Group"), function(var)
+                div(style="display:inline-block",
+                    selectInput(
+                        var,
+                        paste0(var," variable"),
+                        "",
+                        multiple = F,
+                        selectize = T)))
         )
     )
 )
 
 # Define server logic required to draw a histogram
-server <- function(input, output) {
-
-    output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = 'darkgray', border = 'white')
+server <- function(input, output, session) {
+    
+    observeEvent(input$update, {
+        chosen <- lapply(names(topics), function(name) input[[name]]) %>% 
+            unlist(.) %>% 
+            c(NA,.)
+        lapply(c("X","Y","Group"), function(var)
+            updateSelectInput(session = session,
+                              inputId = var,
+                              choices = chosen,
+                              selected = NULL))
+    })
+    
+    observe({
+        chosen <- lapply(names(topics), function(name) input[[name]]) %>% 
+            unlist(.)
+        
+        datapoints <- qualitative %>% 
+            select(all_of(chosen)) %>% 
+            drop_na(.) %>% 
+            nrow(.) %>% 
+            as.character(.)
+        
+        output$datapoints <- renderUI({HTML(paste0("<h5> <em> Number of complete datapoints: ",datapoints,"</em> </h5>"))})
+        
     })
 }
 
