@@ -1,8 +1,8 @@
-chart_type,X_Binary,X_Ordinal,X_Binary+,X_Group,X_Geography_US,X_Geography_world,Y_Binary,Y_Ordinal,Y_Binary+,Y_Group,Y_Geography_US,Y_Geography_world
-scatterplot,1,1,1,0,0,0,1,1,1,0,0,0
-boxplot,1,1,1,0,0,0,0,0,0,0,0,0
-violin,1,1,1,0,0,0,0,0,0,0,0,0
-heatmap,1,1,1,1,1,1,0,0,0,0,0,0
-bar,1,1,1,1,0,0,1,1,1,0,0,0
-us_map,0,0,0,0,1,0,1,1,1,0,0,0
-global_map,0,0,0,0,0,1,1,1,1,0,0,0
+chart_type,X_Binary,X_Ordinal,X_Binary+,X_Group,X_Geography_US,X_Geography_world,X_NA,Y_Binary,Y_Ordinal,Y_Binary+,Y_Group,Y_Geography_US,Y_Geography_world,Y_NA
+scatterplot,1,1,1,0,0,0,0,1,1,1,0,0,0,0
+boxplot,1,1,1,0,0,0,0,0,0,0,0,0,0,0
+violin,1,1,1,0,0,0,0,0,0,0,0,0,0,0
+heatmap,1,1,1,1,1,1,0,0,0,0,0,0,0,0
+bar,1,1,1,1,0,0,0,1,1,1,0,0,0,1
+us_map,0,0,0,0,1,0,0,1,1,1,0,0,0,1
+global_map,0,0,0,0,0,1,0,1,1,1,0,0,0,1

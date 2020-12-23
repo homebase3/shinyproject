@@ -4,9 +4,8 @@ library(shiny)
 library(shinyWidgets)
 library(tidyverse)
 
-#source("functions.R")
-
-
+#source
+# source("model.R")
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -19,7 +18,7 @@ ui <- fluidPage(
         sidebarPanel(
             h4("Step 1: Select variables"),
             htmlOutput("datapoints"),
-            lapply(names(topics), function(name)
+            lapply(names(topics)[names(topics)!="Comment"], function(name)
                    pickerInput(
                        name,
                        name,
@@ -40,7 +39,15 @@ ui <- fluidPage(
                         paste0(var," variable"),
                         "",
                         multiple = F,
-                        selectize = T)))
+                        selectize = T))),
+            htmlOutput("datapoints_chart"),
+            dropdownButton(
+                selectInput("chart_type_options",
+                            "Chart type options",
+                            "",
+                            multiple = F,
+                            selectize = T))
+                    
         )
     )
 )
@@ -70,6 +77,25 @@ server <- function(input, output, session) {
             as.character(.)
         
         output$datapoints <- renderUI({HTML(paste0("<h5> <em> Number of complete datapoints: ",datapoints,"</em> </h5>"))})
+        
+    })
+    observe({
+        chosen_chart <- lapply(c("X","Y","Group"), function(var) input[[var]]) %>% 
+            unlist(.)
+        
+        datapoints_chart <- qualitative %>% 
+            select(any_of(chosen_chart)) %>% 
+            drop_na(.) %>% 
+            nrow(.) %>% 
+            as.character(.)
+        
+        output$datapoints_chart <- renderUI({HTML(paste0("<h5> <em> Number of datapoints for chart: ",datapoints_chart,"</em> </h5>"))})
+        
+        chart_types <- chart_options(input$X,input$Y)
+        updateSelectInput(session = session,
+            inputId = "chart_type_options",
+            choices = chart_types,
+            selected = chart_types[1])
         
     })
 }
