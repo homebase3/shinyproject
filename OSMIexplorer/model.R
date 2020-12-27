@@ -17,6 +17,7 @@ library(d3treeR)
 library(htmlwidgets)
 library(leaflet)
 library(rgdal)
+library(english)
 
 #source functions
 source("functions.R")
@@ -98,12 +99,20 @@ for (i in 1:nrow(column_info)) {
       test <- test + 1
     }
   }
-  if (is.na(values_in_use[[colname]])) {next}
+  if (is.null(values_in_use[[colname]])) {next}
   
   replace <- as.character(mean(values_in_use[[colname]]))
   quantitative[!replaced_condition,colname] <- as.character(replace)
 }
 
-quantitative <- quantitative %>% 
+quantitative <- quantitative %>%
   select(-all_of(non_quant_vars)) %>% 
   mutate_all(type.convert)
+
+quantitative <- quantitative %>% 
+  mutate_at(vars(types[["Binary"]]), as.numeric)
+
+# convert qualitative to factors
+for (var in c(types$Binary,types$Ordinal,types$`Binary+`)) {
+  qualitative[[var]] <- factor(qualitative[[var]], ordered = T, levels = unique(qualitative[[var]][order(quantitative[[var]])]))
+}

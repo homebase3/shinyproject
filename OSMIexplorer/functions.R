@@ -1,4 +1,4 @@
-#variable lookup
+#shiny helpers
 lookup_type <- function(var) {
   column_info[column_info$Short_name == var,"Type"] %>% 
     as.character(.) %>% 
@@ -9,12 +9,12 @@ chart_options <- function(x_var, y_var) {
   tryCatch(
     expr = {
       x_type <- lookup_type(x_var)
-      y_type <- lookup_type(y_var)
-      if (is.na(y_type)) {
+      if (y_var == "None") {
         chart_map[chart_map[[paste0("X_",x_type)]] == 1,1] %>% 
           pull(.) %>% 
           return(.)
       } else {
+        y_type <- lookup_type(y_var)
         chart_map[chart_map[[paste0("X_",x_type)]] == 1 & chart_map[[paste0("Y_",y_type)]] == 1,1] %>% 
           pull(.) %>% 
           return(.)
@@ -26,6 +26,42 @@ chart_options <- function(x_var, y_var) {
   )
 }
 
+render_chart <- function(obj, charttype) {
+  tryCatch(
+    expr = {
+      if (charttype %in% c("scatterplot","boxplot","violin","bar")) {
+        renderPlotly({obj})
+      } else if (charttype == "heatmap") {
+        renderD3tree3({obj})
+      } else {
+        renderLeaflet({obj})
+      }
+    },
+    error = function(e) {
+      renderUI("")
+    }
+  )
+}
+
+output_chart <- function(name, charttype) {
+  tryCatch(
+    expr = {
+      if (charttype %in% c("scatterplot","boxplot","violin","bar")) {
+        plotlyOutput(name)
+      } else if (charttype == "heatmap") {
+        d3tree3Output(name)
+      } else {
+        leafletOutput(name)
+      }
+    },
+    error = function(e) {
+      uiOutput("blank")
+    }
+    
+  )
+
+}
+
   
 
 
@@ -33,47 +69,45 @@ chart_options <- function(x_var, y_var) {
 charting_options <- c("scatterplot", "boxplot", "violin", "heatmap", "bar", "us_map", "global_map")
 charting_functions <- list()
 
-charting_functions[["scatterplot"]] <- function(x,y,group=NA) {
+charting_functions[["scatterplot"]] <- function(x,y,group="None") {
   #build data frame
   df<- cbind(quantitative[,x],quantitative[,y])
   colnames(df) <- c(x,y)
-  if (is.na(group) == F) {
+  if (group != "None") {
     df<- cbind(df,qualitative[,group])
     colnames(df)[3] <- group 
   }
   
   #remove nas
-  df <- df[complete.cases(df),]
+  df <- df %>% drop_na(.)
   
   #build ggplot
-  gg <- ggplot(df)
-  if (is.na(group) == F) {
-    gg <- gg + geom_point(aes(x=!!sym(x), y = !!sym(y), color = !!sym(group)))
+  if (group != "None") {
+    gg <- ggplot(df,aes(x=!!sym(x), y = !!sym(y), color = !!sym(group))) + geom_point() + geom_smooth()
   } else {
-    gg <- gg + geom_point(aes(x=!!sym(x), y = !!sym(y)))
+    gg <- ggplot(df,aes(x=!!sym(x), y = !!sym(y))) + geom_point() + geom_smooth()
   }
-  
-  gg <- gg + geom_smooth()
+
   
   # build plotly and return
   ggplotly(gg) %>% return(.)
 }
 
-charting_functions[["boxplot"]] <- function(x,y,group=NA) {
+charting_functions[["boxplot"]] <- function(x,y,group="None") {
   #build data frame
   df<- cbind(qualitative[,x],quantitative[,y])
   colnames(df) <- c(x,y)
-  if (is.na(group) == F) {
+  if (group != "None") {
     df<- cbind(df,qualitative[,group])
     colnames(df)[3] <- group 
   }
   
   #remove nas
-  df <- df[complete.cases(df),]
+  df <- df %>% drop_na(.)
   
   #build ggplot
   gg <- ggplot(df)
-  if (is.na(group) == F) {
+  if (group != "None") {
     gg <- gg + geom_boxplot(aes(x=!!sym(x), y = !!sym(y), fill = !!sym(x))) + facet_wrap(vars(!!sym(group)))
   } else {
     gg <- gg + geom_boxplot(aes(x=!!sym(x), y = !!sym(y)))
@@ -85,21 +119,21 @@ charting_functions[["boxplot"]] <- function(x,y,group=NA) {
     return(.)
 }
 
-charting_functions[["violin"]] <- function(x,y,group=NA) {
+charting_functions[["violin"]] <- function(x,y,group="None") {
   #build data frame
   df<- cbind(qualitative[,x],quantitative[,y])
   colnames(df) <- c(x,y)
-  if (is.na(group) == F) {
+  if (group != "None") {
     df<- cbind(df,qualitative[,group])
     colnames(df)[3] <- group 
   }
   
   #remove nas
-  df <- df[complete.cases(df),]
+  df <- df %>% drop_na(.)
   
   #build ggplot
   gg <- ggplot(df)
-  if (is.na(group) == F) {
+  if (group != "None") {
     gg <- gg + geom_violin(aes(x=!!sym(x), y = !!sym(y), fill = !!sym(x))) + facet_wrap(vars(!!sym(group)))
   } else {
     gg <- gg + geom_violin(aes(x=!!sym(x), y = !!sym(y)))
@@ -111,26 +145,35 @@ charting_functions[["violin"]] <- function(x,y,group=NA) {
     return(.)
 }
 
-charting_functions[["bar"]] <- function(x,y=NA,group=NA) {
+charting_functions[["bar"]] <- function(x,y="None",group="None") {
   #build data frame
-  df<- cbind(qualitative[,x],quantitative[,y])
-  colnames(df) <- c(x,y)
-  if (is.na(group) == F) {
+  df<- cbind(qualitative[,x])
+  
+  if (y != "None") {
+    df <- cbind(df,  quantitative[,y])
+    colnames(df) <- c(x,y)
+  } else{
+    df <- cbind(df,  quantitative[,x])
+    colnames(df)[2]  <- paste0("Mean_",x)
+  }
+  
+
+  if (group != "None") {
     df<- cbind(df,qualitative[,group])
     colnames(df)[3] <- group 
   }
   
   #remove nas
-  df <- df[complete.cases(df),]
+  df <- df %>% drop_na(.)
   
   
   #build ggplot
-  if (is.na(group) == F & is.na(y) == F) {
-    gg <- ggplot(df) + geom_bar(aes(x=!!sym(x), y = !!sym(y), fill = !!sym(group))) + coord_flip()
-  } else if (is.na(y) == F) {
-    gg <- ggplot(df) + geom_bar(aes(x=!!sym(x), y = !!sym(y))) + coord_flip()
-  } else if (is.na(group) == F) {
-    gg <- swwww43w
+  if (group != "None" & y != "None") {
+    gg <- ggplot(df) + stat_summary(aes(x=!!sym(x), y = !!sym(y), fill = !!sym(group)),fun = "mean", geom = "bar",position=position_dodge()) + ylab(paste0("Mean: ",y)) + coord_flip()
+  } else if (y != "None") {
+    gg <- ggplot(df) + stat_summary(aes(x=!!sym(x), y = !!sym(y)),fun = "mean", geom = "bar") + ylab(paste0("Mean: ",y)) + coord_flip()
+  } else if (group != "None") {
+    gg <- ggplot(df) + geom_bar(aes(x=!!sym(x),  fill = !!sym(group))) + coord_flip()
   } else {
     gg <- ggplot(df) + geom_bar(aes(x=!!sym(x))) + coord_flip()
   }
@@ -139,22 +182,22 @@ charting_functions[["bar"]] <- function(x,y=NA,group=NA) {
   ggplotly(gg) %>% return(.)
 }
 
-charting_functions[["treemap"]] <- function(x,y=NA,group=NA) {
+charting_functions[["heatmap"]] <- function(x,y="None",group="None") {
   #build data frame
   df<- cbind(qualitative[,x],quantitative[,y])
   colnames(df) <- c(x,y)
-  if (is.na(group) == F) {
+  if (group != "None") {
     df<- cbind(df,qualitative[,group])
     colnames(df)[3] <- group 
   }
   
   #remove nasand set count dummy
-  df <- df[complete.cases(df),]
+  df <- df %>% drop_na(.)
   df[,"val"] <- 1
   
   
   #build treemap
-  if (is.na(y) == F & is.na(group) == F) {
+  if (y != "None" & group != "None") {
     df %>% 
       group_by(!!sym(x),!!sym(group)) %>% 
       summarize(mean_res= mean(!!sym(y))) -> summed
@@ -173,7 +216,7 @@ charting_functions[["treemap"]] <- function(x,y=NA,group=NA) {
         mapping = c(min, mid,max),
       ),rootname = x
     ) 
-  } else if (is.na(y) == F) {
+  } else if (y != "None") {
     df %>% 
       group_by(!!sym(x)) %>% 
       summarize(mean_res= mean(!!sym(y))) -> summed
@@ -192,7 +235,7 @@ charting_functions[["treemap"]] <- function(x,y=NA,group=NA) {
         mapping = c(min, mid,max),
       ), rootname = x
     )
-  } else if (is.na(group) == F) {
+  } else if (group != "None") {
     d3tree3(
       tree <- treemap(
         df,
@@ -217,20 +260,20 @@ charting_functions[["treemap"]] <- function(x,y=NA,group=NA) {
     d3tree2(tree, rootname = "world")
 }
 
-charting_functions[["us_map"]] <- function(x,y=NA) {
+charting_functions[["us_map"]] <- function(x,y="None") {
   
   #build data frame
   df<- cbind(qualitative[,x])
   colnames(df) <- x
-  if (is.na(group) == F) {
+  if (group != "None") {
     df<- cbind(df,quantitative[,y])
     colnames(df)[2] <- y
   }
   #remove nas
-  df <- df[complete.cases(df),]
+  df <- df %>% drop_na(.)
   
   #build leaflet
-  if (is.na(y) == F) {
+  if (y != "None") {
     df %>% 
       group_by(!!sym(x)) %>% 
       summarize(mean_y = mean(!!sym(y))) -> summed
@@ -263,6 +306,7 @@ charting_functions[["us_map"]] <- function(x,y=NA) {
       return(.)
     
   } else {
+    
     df %>% 
       group_by(!!sym(x)) %>% 
       summarize(count = n()) -> summed
@@ -295,20 +339,20 @@ charting_functions[["us_map"]] <- function(x,y=NA) {
   }
 }
 
-charting_functions[["world_map"]] <- function(x,y=NA) {
+charting_functions[["world_map"]] <- function(x,y=None) {
   
   #build data frame
   df<- cbind(qualitative[,x])
   colnames(df) <- x
-  if (is.na(group) == F) {
+  if (group != "None") {
     df<- cbind(df,quantitative[,y])
     colnames(df)[2] <- y
   }
   #remove nas
-  df <- df[complete.cases(df),]
+  df <- df %>% drop_na(.)
   
   #build leaflet
-  if (is.na(y) == F) {
+  if (y != "None") {
     df %>% 
       group_by(!!sym(x)) %>% 
       summarize(mean_y = mean(!!sym(y))) -> summed
@@ -340,6 +384,7 @@ charting_functions[["world_map"]] <- function(x,y=NA) {
       return(.)
     
   } else {
+
     df %>% 
       group_by(!!sym(x)) %>% 
       summarize(count = n()) -> summed
@@ -369,4 +414,21 @@ charting_functions[["world_map"]] <- function(x,y=NA) {
       addLegend(pal = mypalette, values = ~count,opacity=0.9,position = "bottomleft") %>% 
       return(.)
   }
+}
+
+
+charting_wrapper <-function(type, x, y, group) {
+  tryCatch(
+    expr = {
+      if (type %in% c("us_map","world_map")) {
+        return(charting_functions[[type]](x,y))
+      } else {
+        return(charting_functions[[type]](x,y,group))
+      }
+    },
+    error = function(e) {
+      gg <- ggplot(mtcars) + aes(x=cyl, y = wt) + geom_point()
+      return(ggplotly(gg))
+    }
+  )
 }
