@@ -265,7 +265,7 @@ charting_functions[["us_map"]] <- function(x,y="None") {
   #build data frame
   df<- cbind(qualitative[,x])
   colnames(df) <- x
-  if (group != "None") {
+  if (y != "None") {
     df<- cbind(df,quantitative[,y])
     colnames(df)[2] <- y
   }
@@ -302,7 +302,7 @@ charting_functions[["us_map"]] <- function(x,y="None") {
                      style = list("font-weight" = "normal", padding = "3px 8px"), 
                      textsize = "13px", 
                      direction = "auto")) %>% 
-      addLegend(pal = mypalette, values = states_it@data[[y]],opacity=0.9,position = "bottomleft") %>% 
+      addLegend(pal = mypalette, title = "mean", values = states_it@data[[y]],opacity=0.9,position = "bottomleft") %>% 
       return(.)
     
   } else {
@@ -339,12 +339,12 @@ charting_functions[["us_map"]] <- function(x,y="None") {
   }
 }
 
-charting_functions[["world_map"]] <- function(x,y=None) {
+charting_functions[["world_map"]] <- function(x,y="None") {
   
   #build data frame
   df<- cbind(qualitative[,x])
   colnames(df) <- x
-  if (group != "None") {
+  if (y != "None") {
     df<- cbind(df,quantitative[,y])
     colnames(df)[2] <- y
   }
@@ -380,7 +380,7 @@ charting_functions[["world_map"]] <- function(x,y=None) {
                     style = list("font-weight" = "normal", padding = "3px 8px"), 
                     textsize = "13px", 
                     direction = "auto")) %>% 
-      addLegend(pal = mypalette, values = world_it@data[[y]],opacity=0.9,position = "bottomleft") %>% 
+      addLegend(pal = mypalette, title = "mean", values = world_it@data[[y]],opacity=0.9,position = "bottomleft") %>% 
       return(.)
     
   } else {
@@ -405,7 +405,7 @@ charting_functions[["world_map"]] <- function(x,y=None) {
     
     leaflet(world_it) %>% 
       addTiles() %>% 
-      addPolygons(fillColor = ~mypalette(states_it@data$count), stroke=FALSE,
+      addPolygons(fillColor = ~mypalette(world_it@data$count), stroke=FALSE,
                   label = mytext,
                   labelOptions = labelOptions( 
                     style = list("font-weight" = "normal", padding = "3px 8px"), 
