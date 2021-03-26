@@ -3,20 +3,21 @@ library(tidyverse)
 library(shiny)
 library(shinythemes)
 library(plotly)
-# library(rstanarm)
 library(sortable)
 library(htmlwidgets)
 library(formattable)
 library(readr)
 library(FactoMineR)
 library(missMDA)
-library(rstanarm)
+# library(rstanarm)
 library(maps)
 library(treemap)
 library(d3treeR)
 library(htmlwidgets)
 library(leaflet)
 library(rgdal)
+library(DT)
+library(kableExtra)
 
 #source functions
 source("functions.R")
@@ -30,6 +31,8 @@ chart_types <- read_csv("config/Chart types.csv")
 states  <- readOGR(dsn = paste0(getwd(),"/data/states.json"))
 world <- readOGR(dsn = paste0(getwd(),"/data/world.json"))
 
+#adjust chart types for only plotly charts
+chart_types_full <- c("scatterplot","boxplot","violin","bar")
 
 #process columns
 full_names <- colnames(df2019)

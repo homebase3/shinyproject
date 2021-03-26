@@ -62,11 +62,10 @@ output_chart <- function(name, charttype) {
 
 }
 
-  
 
 
 #charging logic
-charting_options <- c("scatterplot", "boxplot", "violin", "heatmap", "bar", "us_map", "global_map")
+charting_options <- c("scatterplot", "boxplot", "violin", "bar")
 charting_functions <- list()
 
 charting_functions[["scatterplot"]] <- function(x,y,group="None") {
@@ -123,7 +122,7 @@ charting_functions[["violin"]] <- function(x,y,group="None") {
   #build data frame
   df<- cbind(qualitative[,x],quantitative[,y])
   colnames(df) <- c(x,y)
-  if (group != "None") {
+  if (group %in% c("None",x,y) == F) {
     df<- cbind(df,qualitative[,group])
     colnames(df)[3] <- group 
   }
@@ -184,11 +183,14 @@ charting_functions[["bar"]] <- function(x,y="None",group="None") {
 
 charting_functions[["heatmap"]] <- function(x,y="None",group="None") {
   #build data frame
-  df<- cbind(qualitative[,x],quantitative[,y])
-  colnames(df) <- c(x,y)
+  df<- cbind(qualitative[,x])
+  if (y != "None") {
+    df <- cbind(df,quantitative[,y])
+    colnames(df) <- c(x,y)
+  }
   if (group != "None") {
     df<- cbind(df,qualitative[,group])
-    colnames(df)[3] <- group 
+    colnames(df)[ncol(df)] <- group 
   }
   
   #remove nasand set count dummy
@@ -205,8 +207,7 @@ charting_functions[["heatmap"]] <- function(x,y="None",group="None") {
     max <- max(summed$mean_res)
     mid <- mean(min,max)
     
-    d3tree3(
-      treemap(
+    tm <- treemap(
         df,
         index = c(x,group),
         vSize = "val",
@@ -214,8 +215,10 @@ charting_functions[["heatmap"]] <- function(x,y="None",group="None") {
         type = "value",
         fun.aggregate = "mean",
         mapping = c(min, mid,max),
-      ),rootname = x
-    ) 
+        draw = T,
+        title.legend = paste0("Mean: ",y),
+        format.legend = list(scientific = FALSE, big.mark = " ")
+      )
   } else if (y != "None") {
     df %>% 
       group_by(!!sym(x)) %>% 
@@ -224,40 +227,31 @@ charting_functions[["heatmap"]] <- function(x,y="None",group="None") {
     max <- max(summed$mean_res)
     mid <- mean(min,max)
     
-    d3tree3(
-      tree <- treemap(
+    tm <-treemap(
         df,
         index = c(x),
         vSize = "val",
         vColor = y,
         type = "value",
         fun.aggregate = "mean",
-        mapping = c(min, mid,max),
-      ), rootname = x
-    )
+        mapping = c(min, mid,max)
+      )
   } else if (group != "None") {
-    d3tree3(
-      tree <- treemap(
+     tm <-  treemap(
         df,
         index = c(x,group),
         vSize = "val",
         type = "index"
-      ), rootname = x
-    )
-
+     )
   } else  {
-    d3tree3(
-      tree <- treemap(
+    tm <- treemap(
         df,
         index = c(x),
         vSize = "val",
         type = "index"
-      ), rootname = x
-    )
+      )
   }
-  
-  # build interactive treemap and return
-    d3tree2(tree, rootname = "world")
+  d3tree3(tm,rootname = x)
 }
 
 charting_functions[["us_map"]] <- function(x,y="None") {
@@ -427,7 +421,7 @@ charting_wrapper <-function(type, x, y, group) {
       }
     },
     error = function(e) {
-      gg <- ggplot(mtcars) + aes(x=cyl, y = wt) + geom_point()
+      gg <- ggplot(mtcars) + aes(x=cyl, y = wt) + geom_blank() + xlab("") + ylab("")
       return(ggplotly(gg))
     }
   )
