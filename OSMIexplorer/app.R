@@ -12,14 +12,6 @@ library(rintrojs)
 # source
 source("model.R")
 
-
-
-#   step(
-#   "chartTypeOptions",
-#   "Select your chart type",
-#   "Now that you've selected your variables to chart, you can choose from a menu of charting options for these choices, which updates dynamically based on the types of variables (e.g. categorical, continuous) you have chosen in the prior step. If no variables have been selected or there is a charting error, the chart will appear blank."
-# )$
-
 # define tour
 tour_list <- list()
 tour_list[['#tour']] <- '<b> Welcome to the tour! </b> <br> Click through for a full introduction of the workflow!'
