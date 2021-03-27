@@ -58,11 +58,11 @@ ui <- fluidPage(
     # build main panel for plots
     mainPanel(
       h4("Step 3: Organize variables for charting",id = "step_3"),
-      lapply(c("X_var", "Y_var", "Group_var"), function(var) {
+      lapply(c("X", "Y", "Group"), function(var) {
         div(
           style = "display:inline-block",
           selectInput(
-            var,
+            paste0(var,"_var"),
             paste0(var, " variable"),
             "",
             multiple = F,
@@ -72,7 +72,7 @@ ui <- fluidPage(
       }),
       htmlOutput("datapoints_chart"),
       h4("Step 4: Explore charts and variable information", id = "step_4"),
-      tabsetPanel(id = "tabz",
+      tabsetPanel(
         tabPanel(
           "Chart",
           dropdownButton(
@@ -84,7 +84,7 @@ ui <- fluidPage(
               selectize = T
             ),
             circle = TRUE, status = "info", icon = icon("gear"), width = "300px",
-            tooltip = tooltipOptions(title = "Click to see inputs!")
+            tooltip = tooltipOptions(title = "Click to select chart type")
           ),
           plotlyOutput("chart")
         ),
@@ -114,15 +114,10 @@ server <- function(input, output, session) {
             options = list(steps = tour_df))
   })
   
-  # # start tour when tour button is clicked
-  # guide$init()
-  # observeEvent(input$tour, {
-  #   guide$start()
-  # })
 
   # topic update observer
   observeEvent(input$update, {
-    chosen <- lapply(names(topics), function(name) input[[name]]) %>%
+    chosen <- lapply(names(topics), function(name) input[[gsub(" ", "_", name)]]) %>%
       unlist(.) %>%
       c("None", .)
     lapply(c("X_var", "Y_var", "Group_var"), function(var) {
@@ -136,7 +131,7 @@ server <- function(input, output, session) {
   })
 
   observe({
-    chosen <- lapply(names(topics), function(name) input[[name]]) %>%
+    chosen <- lapply(names(topics), function(name) input[[gsub(" ", "_", name)]]) %>%
       unlist(.)
 
     datapoints <- qualitative %>%
