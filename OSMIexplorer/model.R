@@ -8,6 +8,7 @@ library(htmlwidgets)
 library(readr)
 library(DT)
 library(kableExtra)
+library(rgdal)
 
 # source functions
 source("functions.R")
